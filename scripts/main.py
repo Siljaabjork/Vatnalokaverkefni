@@ -6,10 +6,10 @@ from lidur6 import run_lidur6
 from lidur7 import run_lidur7   
 from lidur8 import run_lidur8
 
-run_lidur2()
+#run_lidur2()
 run_lidur3()
-run_lidur4()
-run_lidur5()
-run_lidur6()
-run_lidur7()
-run_lidur8()
+#run_lidur4()
+#run_lidur5()
+#run_lidur6()
+#run_lidur7()
+#run_lidur8()

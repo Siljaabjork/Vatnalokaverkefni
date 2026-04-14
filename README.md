@@ -88,4 +88,4 @@ Python pakkar sem þarf að hafa:
 
 Hólmfríður Hermannsdóttir,
 Sigríður Lára Ingibjörnsdóttir og
-Silja Björk Ægisdóttir
+Silja

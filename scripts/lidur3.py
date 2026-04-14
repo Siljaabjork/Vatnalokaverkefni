@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from scipy.stats import theilslopes
 
 def run_baseflow():
-    skra = "data/rennslisgogn.csv"
+    skra = "lamah_ice/D_gauges/2_timeseries/daily/ID_12.csv"
 
     df = pd.read_csv(skra, sep=";")
 
