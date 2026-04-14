@@ -70,7 +70,7 @@ Kóðinn býr til myndir í möppunni `figures/`, t.d.:
 
 ## Kröfur
 
-Python pakkar sem þarf:
+Python pakkar sem þarf að hafa:
 
 * pandas
 * numpy
@@ -80,12 +80,12 @@ Python pakkar sem þarf:
 
 ## Athugasemdir
 
-* Gögn úr LamaH-Ice eru ekki innifalin vegna stærðar
+* Gögn úr LamaH-Ice eru ekki innifalin vegna stærðar þeirra
 * Kóðinn gerir ráð fyrir að gagnamappan `lamah_ice/` sé til staðar með réttum slóðum
 * Allar niðurstöður eru endurgeranlegar með því að keyra `main.py`
 
 ## Höfundar
 
-Hólmfríður Hermannsdóttir
-Sigríður Lára Ingibjörnsdóttir
+Hólmfríður Hermannsdóttir,
+Sigríður Lára Ingibjörnsdóttir og
 Silja Björk Ægisdóttir
