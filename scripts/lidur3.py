@@ -38,27 +38,19 @@ def run_baseflow():
         for t in range(1, n):
             q[t] = alpha * q[t-1] + ((1 + alpha) / 2.0) * (Q[t] - Q[t-1])
 
-
-       
             if q[t] < 0:
                 q[t] = 0.0
             if q[t] > Q[t]:
                 q[t] = Q[t]
 
-
             qb[t] = Q[t] - q[t]
-
 
             if qb[t] < 0:
                 qb[t] = 0.0
             if qb[t] > Q[t]:
                 qb[t] = Q[t]
 
-
         return q, qb
-
-
-
 
     def ladson_three_pass(Q, alpha=0.925):
         """
@@ -68,7 +60,6 @@ def run_baseflow():
         3) áfram
         """
         Q = np.asarray(Q, dtype=float)
-
 
         _, qb1 = lyne_hollick_forward(Q, alpha=alpha)
 
@@ -88,7 +79,6 @@ def run_baseflow():
         """
         Q = np.asarray(Q, dtype=float)
         Qb = np.asarray(Qb, dtype=float)
-
 
         valid = np.isfinite(Q) & np.isfinite(Qb) & (Q >= 0)
         return np.sum(Qb[valid]) / np.sum(Q[valid])
@@ -118,15 +108,12 @@ def run_baseflow():
 def run_recession():
 
     q_df = pd.read_csv("data/rennslisgogn.csv", sep=";")
-    w_df = pd.read_csv("data/vedurgogn.csv", sep=";")   
+    w_df = pd.read_csv("data/vedurgogn.csv", sep=";")
 
     q_df["date"] = pd.to_datetime(dict(year=q_df["YYYY"], month=q_df["MM"], day=q_df["DD"]))
     w_df["date"] = pd.to_datetime(dict(year=w_df["YYYY"], month=w_df["MM"], day=w_df["DD"]))
 
     q_df["qobs"] = pd.to_numeric(q_df["qobs"], errors="coerce")
-
-    if q_df["qobs"].median() > 1000:
-        q_df["qobs"] = q_df["qobs"] / 1000.0
 
     w_df["prec_rav"] = pd.to_numeric(w_df["prec_rav"], errors="coerce")
 
@@ -160,11 +147,11 @@ def run_recession():
     results = []
 
     for i, seg in enumerate(segments, start=1):
-        x = np.arange(len(seg))              
-        y = np.log(seg["qobs"].values)      
+        x = np.arange(len(seg))
+        y = np.log(seg["qobs"].values)
 
         slope, intercept, lo_slope, hi_slope = theilslopes(y, x, 0.95)
-   
+
         k = -slope
         K_daily = np.exp(-k)
 
@@ -194,18 +181,48 @@ def run_recession():
     print(f"Meðaltal recession constant, k = {k_mean:.4f} 1/dag")
     print(f"Samsvarandi daglegur recession factor, K = exp(-k) = {K_median:.4f}")
 
-    plt.figure(figsize=(10, 6))
-    plt.plot(df["date"], df["qobs"], linewidth=0.8, label="Rennsli")
-    for seg in segments:
-        plt.plot(seg["date"], seg["qobs"], linewidth=2)
-    plt.yscale("log")
+    res_df["distance_from_median"] = (res_df["k_day^-1"] - k_median).abs()
+    best_idx = res_df["distance_from_median"].idxmin()
+    best_seg_no = int(res_df.loc[best_idx, "segment"])
+    best_seg = segments[best_seg_no - 1]
+
+    x = np.arange(len(best_seg))
+    y = np.log(best_seg["qobs"].values)
+    slope, intercept, _, _ = theilslopes(y, x, 0.95)
+    q_fit = np.exp(intercept + slope * x)
+
+    plt.figure(figsize=(8, 5))
+    plt.plot(best_seg["date"], best_seg["qobs"], marker="o", label="Mælt rennsli")
+    plt.plot(best_seg["date"], q_fit, linestyle="--", label="Fitted")
     plt.xlabel("Dagsetning")
-    plt.ylabel("Q (m3/s)")
-    plt.title("Recession periods í rennslisgögnum")
+    plt.ylabel("Rennsli Q (m³/s)")
+    plt.title(f"Recession-skeið {best_seg_no}")
+    plt.xticks(rotation=45)
     plt.legend()
-    plt.grid(True, which="both", alpha=0.3)
+    plt.grid(True, alpha=0.3)
     plt.tight_layout()
-    plt.savefig("figures/recession.png")
+    plt.savefig("figures/recession_skeid.png")
+
+    plt.figure(figsize=(8, 5))
+    plt.scatter(x, y, label="ln(Q) mælt")
+    plt.plot(x, intercept + slope * x, label=f"Fit: slope = {slope:.4f}")
+    plt.xlabel("Tími frá upphafi skeiðs (dagar)")
+    plt.ylabel("ln(Q)")
+    plt.title(f"ln(Q) fyrir recession-skeið {best_seg_no}")
+    plt.legend()
+    plt.grid(True, alpha=0.3)
+    plt.tight_layout()
+    plt.savefig("figures/recession_ln.png")
+
+    k_rep = -slope
+    tau_rep = -1 / slope   
+
+    print("\nDæmigert skeið:")
+    print(f"Segment nr.: {best_seg_no}")
+    print(f"Tímabil: {best_seg['date'].iloc[0].date()} til {best_seg['date'].iloc[-1].date()}")
+    print(f"Hallatala = {slope:.4f}")
+    print(f"Recession constant, k = {k_rep:.4f} 1/dag")
+    print(f"Samsvarandi timescale = {-1/slope:.2f} dagar")
 
 def run_lidur3():
     run_baseflow()

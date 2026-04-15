@@ -11,22 +11,7 @@ def run_lidur4():
     w["date"] = pd.to_datetime(dict(year=w["YYYY"], month=w["MM"], day=w["DD"]))
 
     basin = v.loc[v["id"] == 12].iloc[0]
-
-    def scale_metadata(value, divisor_if_large, threshold):
-        if pd.isna(value):
-            return np.nan
-        return value / divisor_if_large if abs(value) > threshold else value
-
-    area_km2 = scale_metadata(basin["area_calc"], divisor_if_large=100, threshold=10000)
-    elev_mean_m = scale_metadata(basin["elev_mean"], divisor_if_large=1000, threshold=10000)
-    p_mean_mm_yr = scale_metadata(basin["p_mean"], divisor_if_large=10, threshold=1000)
-    slope_mean = scale_metadata(basin["slope_mean"], divisor_if_large=10000, threshold=1000)
-
     print("Vatnasvið 12")
-    print(f"Flatarmál ~ {area_km2:.2f} km²")
-    print(f"Meðalhæð ~ {elev_mean_m:.1f} m")
-    print(f"Meðalúrkoma ~ {p_mean_mm_yr:.1f} mm/ár")
-    print(f"Meðalhalli ~ {slope_mean:.2f}")
     print()
 
     carra_cols = [
@@ -51,53 +36,31 @@ def run_lidur4():
     print("Fjöldi daga:", len(df))
     print()
 
-    def scale_carra(series, threshold=100, divisor=1000):
-        """
-        Ef gildi eru mjög stór er líklegt að þau séu í röngum kvarða
-        og þurfi að deilast með 1000.
-        """
-        s = series.copy()
-        mask = s.abs() > threshold
-        s.loc[mask] = s.loc[mask] / divisor
-        return s
-
-    df["P"] = scale_carra(df["prec_carra"], threshold=100, divisor=1000)
-
-    df["ET"] = -scale_carra(df["total_et_carra"], threshold=100, divisor=1000)
-
-    df["SWE"] = scale_carra(df["swe_carra"], threshold=1000, divisor=1000)
-
+    df["P"] = pd.to_numeric(df["prec_carra"], errors="coerce")
+    df["ET"] = pd.to_numeric(df["total_et_carra"], errors="coerce")
+    df["SWE"] = pd.to_numeric(df["swe_carra"], errors="coerce")
     df["dS_snow"] = df["SWE"].diff()
-
-    df["Q_m3s"] = df["qobs"] / 1000
-
-    area_m2 = area_km2 * 1e6
-    df["Q_mm_day"] = df["Q_m3s"] * 86400 / area_m2 * 1000
+    df["Q_m3s"] = pd.to_numeric(df["qobs"], errors="coerce")
+    df = df.dropna(subset=["P", "ET", "SWE", "Q_m3s"]).copy()
 
     monthly = (
         df.set_index("date")
         .resample("MS")
         .agg({
-            "P": "sum",              
-            "ET": "sum",            
-            "dS_snow": "sum",        
-            "SWE": "mean",          
-            "qobs": "mean",          
-            "Q_mm_day": "sum"        
+            "P": "sum",
+            "ET": "sum",
+            "dS_snow": "sum",
+            "SWE": "mean",
+            "qobs": "mean",
+            "Q_m3s": "mean"
         })
         .reset_index()
     )
 
     monthly = monthly.rename(columns={
         "qobs": "qobs_mean",
-        "Q_mm_day": "Q_mm"
+        "Q_m3s": "Q_m3s_mean"
     })
-
-    monthly["residual_mm"] = monthly["P"] - monthly["ET"] - monthly["Q_mm"] - monthly["dS_snow"]
-
-    print("Mánaðarleg samantekt:")
-    print(monthly.head())
-    print()
 
     annual = (
         df.set_index("date")
@@ -105,52 +68,18 @@ def run_lidur4():
         .agg({
             "P": "sum",
             "ET": "sum",
-            "Q_mm_day": "sum",
-            "dS_snow": "sum"
+            "dS_snow": "sum",
+            "Q_m3s": "mean"
         })
         .reset_index()
-        .rename(columns={"Q_mm_day": "Q_mm"})
+        .rename(columns={"Q_m3s": "Q_m3s_mean"})
     )
 
-    annual["residual_mm"] = annual["P"] - annual["ET"] - annual["Q_mm"] - annual["dS_snow"]
-
     print("Meðaltöl yfir allt tímabilið:")
-    print("P    =", annual["P"].mean())
-    print("ET   =", annual["ET"].mean())
-    print("Q    =", annual["Q_mm"].mean())
-    print("dS   =", annual["dS_snow"].mean())
-    print("Leif =", annual["residual_mm"].mean())
-    print()
-
-    uncertainty = pd.DataFrame({
-        "Liður": ["P", "Q", "ET", "ΔS", "SWE", "Leif"],
-        "Uppruni": [
-            "CARRA endurgreining",
-            "Mælt rennsli, umbreytt í mm/dag",
-            "CARRA endurgreining / reiknað",
-            "Reiknað úr breytingu í SWE",
-            "CARRA endurgreining",
-            "Reiknað sem lokunarvilla"
-        ],
-        "Tegund": [
-            "Reiknað/líkan",
-            "Mælt + umbreyting",
-            "Reiknað/líkan",
-            "Að hluta reiknað, að hluta ófullkomið",
-            "Reiknað/líkan",
-            "Óþekkt / samsett óvissa"
-        ],
-        "Helstu óvissuþættir": [
-            "Grid-upplausn, staðsetning úrkomu, snjó/úrkomuskil, fjalllendi",
-            "Mælivilla, rating-curve, einingar qobs, flatarmál vatnasviðs",
-            "Líkangerð, formerki, geislun, vindur, rakastig",
-            "SWE nær aðeins snjóforða, ekki jarðvegsvatni/grunnvatni",
-            "Háð CARRA-líkani og skölun gagna",
-            "Safnar saman öllum skekkjum í P, ET, Q og ΔS"
-        ]
-    })
-
-    print(uncertainty)
+    print("P       =", annual["P"].mean())
+    print("ET      =", annual["ET"].mean())
+    print("dS      =", annual["dS_snow"].mean())
+    print("Q_m3s   =", annual["Q_m3s_mean"].mean())
     print()
 
     plt.figure(figsize=(12, 5))
@@ -162,24 +91,15 @@ def run_lidur4():
     plt.xlabel("Ár")
     plt.ylabel("mm/mánuð")
     plt.tight_layout()
-    plt.savefig("figures/manadarlegar_stærðir.png")
+    plt.savefig("figures/manaðarlegar_stærðir.png")
 
     plt.figure(figsize=(12, 5))
-    plt.plot(monthly["date"], monthly["qobs_mean"])
-    plt.title("Mælt rennsli (qobs), mánaðarlegt meðaltal")
+    plt.plot(monthly["date"], monthly["Q_m3s_mean"])
+    plt.title("Mælt rennsli, mánaðarlegt meðaltal")
     plt.xlabel("Ár")
-    plt.ylabel("qobs")
+    plt.ylabel("Q (m³/s)")
     plt.tight_layout()
-    plt.savefig("figures/manadarlegt_medaltal_rennsli.png")
-
-    plt.figure(figsize=(12, 4))
-    plt.plot(monthly["date"], monthly["residual_mm"])
-    plt.axhline(0, linestyle="--")
-    plt.title("Leif vatnajafnvægis: P - ET - Q - ΔSsnjór")
-    plt.xlabel("Ár")
-    plt.ylabel("mm/mánuð")
-    plt.tight_layout()
-    plt.savefig("figures/leif_vatnajafnvaegis.png")   
+    plt.savefig("figures/manaðarlegt_meðaltal_rennsli.png")
 
     plt.figure(figsize=(12, 4))
     plt.plot(monthly["date"], monthly["SWE"])
@@ -187,4 +107,5 @@ def run_lidur4():
     plt.xlabel("Ár")
     plt.ylabel("mm")
     plt.tight_layout()
-    plt.savefig("figures/medalsnjofordi.png")   
+    plt.savefig("figures/medalsnjoforði.png")
+
