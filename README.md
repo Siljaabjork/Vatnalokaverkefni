@@ -3,7 +3,7 @@
 ## Lýsing
 
 Þetta verkefni inniheldur vatnafræðilega greiningu á rennsli Dynjandisár sem er vatnasvið ID_12 úr LamaH-Ice gagnasafninu.
-Markmið er að greina rennslishegðun, flóðatíðni, leitni o.fl. og búa til myndir sem eru notaðar í skýrslu.
+Markmiðið er að greina rennslishegðun, flóðatíðni, leitni o.fl. og búa til myndir sem eru notaðar í skýrslu.
 
 ## Gögn
 
