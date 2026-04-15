@@ -25,17 +25,13 @@ def run_lidur5():
     data["Q"] = pd.to_numeric(data["Q"], errors="coerce")
     data = data.dropna(subset=["Q"]).reset_index(drop=True)
 
-    # Ef þú vilt sleppa núllum, taktu comment af næstu línu:
-    # data = data[data["Q"] > 0].reset_index(drop=True)
-
     #Reikna flow duration curve
-    # Raða frá hæsta rennsli niður í lægsta
     fdc = data.sort_values("Q", ascending=False).reset_index(drop=True)
 
     n = len(fdc)
     fdc["rank"] = np.arange(1, n + 1)
 
-    # Exceedance probability (%)
+    #Exceedance probability
     fdc["exceedance"] = 100 * fdc["rank"] / (n + 1)
 
     #Reikna Q5, Q50 og Q95
@@ -121,9 +117,7 @@ def run_lidur5():
     plt.tight_layout()
     plt.savefig("figures/langaegislina_log.png")
 
-    #Sjálfvirk gróf túlkun
     print("\nTúlkun:")
-
     #Sveiflukennd/stöðug út frá FDC hallanum
     if pd.notna(slope_fdc):
         if slope_fdc > 1.5:

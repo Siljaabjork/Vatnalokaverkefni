@@ -66,7 +66,6 @@ def run_lidur8():
     baseline_Q = pre_window.iloc[:n_base]["Q"].min()
     return_threshold = baseline_Q + 0.05 * (peak_Q - baseline_Q)
 
-    #Extend window after peak until Q returns to baseline (max 120 days)
     for days_after in range(10, 121, 5):
         end_window  = peak_date + pd.Timedelta(days=days_after)
         after_check = data[(data["date"] > peak_date) & (data["date"] <= end_window)]
@@ -175,17 +174,14 @@ def run_lidur8():
             bbox=dict(facecolor="white", edgecolor="none", alpha=0.8, pad=1)
         )
 
-    # Time-to-peak: start_date → peak_date
     draw_span(ax, start_date, peak_date, level1,
             f"Time-to-peak = {time_to_peak_days} d", "green")
 
-    # Recession time: peak_date → return_date
+    #Recession time
     if return_date is not None:
         draw_span(ax, peak_date, return_date, level2,
                 f"Recession time = {int(recession_time_days)} d", "purple")
-
-
-    # Excess rain release time: rain_end_date → return_date
+        
     if rain_end_date is not None and return_date is not None and not np.isnan(excess_rain_release_time_days):
         draw_span(ax, rain_end_date, return_date, level3,
                 f"Excess rain release = {int(excess_rain_release_time_days)} d", "orange")

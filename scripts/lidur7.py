@@ -16,7 +16,6 @@ def run_lidur7():
     dict(year=df["YYYY"], month=df["MM"], day=df["DD"])
     )
 
-    #ÁR og MÁNUÐUR
     df["year"] = df["date"].dt.year
     df["month"] = df["date"].dt.month
 
@@ -33,11 +32,8 @@ def run_lidur7():
 
     df["season"] = df["month"].apply(season_from_month)
 
-    #Látum desember tilheyra næsta vetri
     df["season_year"] = df["year"]
     df.loc[df["month"] == 12, "season_year"] = df.loc[df["month"] == 12, "year"] + 1
-
-    #Búa til árs- og árstíðagögn
 
     #Árlegt meðalrennsli
     annual = df.groupby("year", as_index=False)["qobs"].mean()
@@ -51,9 +47,7 @@ def run_lidur7():
     def trend_analysis(data, time_col="year", value_col="Q_mean"):
         x = data[time_col].values
         y = data[value_col].values
-        #Theil-Sen estimator
         slope, intercept, low_slope, high_slope = theilslopes(y, x, 0.95)
-        #Modified Mann-Kendall test (Hamed & Rao)
         mk_result = mk.hamed_rao_modification_test(y)
         #Pakka niðurstöðum
         result = {
@@ -74,13 +68,11 @@ def run_lidur7():
 
     #Reikna leitni fyrir hverja árstíð
     season_results = []
-
     for season_name in ["Vetur", "Vor", "Sumar", "Haust"]:
         temp = seasonal[seasonal["season"] == season_name].copy()
         res = trend_analysis(temp)
         res["season"] = season_name
         season_results.append(res)
-
     season_results_df = pd.DataFrame(season_results)
 
     #Sýna niðurstöður
